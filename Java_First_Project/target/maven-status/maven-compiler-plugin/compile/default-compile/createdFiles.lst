@@ -1,0 +1,13 @@
+com\calmkin\service\impl\BrandServiceImpl.class
+com\calmkin\service\old_servive\selectByIdService.class
+com\calmkin\service\old_servive\updateService.class
+com\calmkin\web\servlet\BaseServlet.class
+com\calmkin\service\old_servive\addService.class
+com\calmkin\web\old_servlet\old_selectByIdServlet.class
+com\calmkin\service\BrandService.class
+com\calmkin\pojo\PageBean.class
+com\calmkin\pojo\Brand.class
+com\calmkin\utils\SqlSessionFactoryUtils.class
+com\calmkin\mapper\BrandMapper.class
+com\calmkin\web\servlet\brandServlet.class
+com\calmkin\web\old_servlet\old_addServlet.class
