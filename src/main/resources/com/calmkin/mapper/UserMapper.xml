@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.calmkin.mapper.UserMapper">
+
+    <!--用户信息Mapper-->
+    <resultMap id="userResultMap" type="user">
+        <result column="card_id" property="cardID"></result>
+        <result column="user_name" property="userName"></result>
+    </resultMap>
+    <insert id="insertUser">
+        insert into user(card_id,tele,user_name,addr)
+        values (#{cardID},#{tele},#{userName},#{home})
+    </insert>
+    <select id="getUserId" resultType="java.lang.Integer">
+        select id
+        from user
+        where card_id = #{cardID}
+    </select>
+
+
+</mapper>

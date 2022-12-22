@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户信息采集</title>
+</head>
+<body>
+  <div id="cover">
+    <el-tabs v-model="first">
+      <el-tab-pane label="核酸预约" name="first">
+        <el-form status-icon :model="bookForm" :rules="bookRules" ref="bookForm" label-width="100px" class="form" >
+          <el-row class="formTitle">
+              核酸预约信息表
+          </el-row>
+          <el-row>
+            <!-- 姓名 -->
+            <el-col :span="12">
+              <el-form-item label="姓名" prop="userName">
+                <el-input  v-model="bookForm.userName"></el-input>
+              </el-form-item>
+            </el-col>
+            <!-- 电话号码 -->
+            <el-col :span="12">
+              <el-form-item label="电话号码" prop="tele">
+                <el-input v-model="bookForm.tele" maxlength="11"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <!-- 身份证号 -->
+            <el-col :span="12">
+              <el-form-item label="身份证号" prop="cardID">
+                <el-input v-model="bookForm.cardID" maxlength="18"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <!-- 预约地点 -->
+            <el-col :span="12">
+              <el-form-item label="预约地点" prop="subPlace">
+                <el-select v-model="bookForm.subPlace" placeholder="请选择">
+                  <el-option
+                    v-for="item in checkPlaces"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                  >
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <!-- 核酸检测时间 -->
+            <el-col :span="12">
+              <el-form-item label="预约时间" prop="subTime">
+                <el-select v-model="bookForm.subTime" placeholder="请选择">
+                  <el-option
+                    v-for="item in checkTimes"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <!-- 家庭住址 -->
+            <el-col :span="18">
+              <el-form-item label="家庭住址" prop="home">
+                <el-input v-model="bookForm.home"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <!-- 提交按钮 -->
+            <el-col :offset="4" :span="3">
+              <el-form-item>
+                <el-button type="primary" @click="commitForm">提交</el-button>
+              </el-form-item>
+            </el-col>
+            <el-col :offset="3" :span="3">
+              <el-form-item>
+                <el-button @click="resetForm('bookForm')">重置</el-button>
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </el-form>
+      </el-tab-pane>
+
+      <el-tab-pane label="核酸查询" name="second">
+        <el-form status-icon :model="inquireForm" :inline="true"  ref="inquireForm" label-width="100px" class="form" >
+          <el-row class="formTitle">
+            核酸结果查询
+          </el-row>
+          <el-row>
+            <!-- 姓名 -->
+              <el-form-item label="姓名" prop="userName">
+                <el-input  v-model="inquireForm.userName"></el-input>
+              </el-form-item>
+            <!-- 电话号码 -->
+              <el-form-item label="身份证号" prop="cardID">
+                <el-input v-model="inquireForm.cardID" maxlength="18"></el-input>
+              </el-form-item>
+
+              <el-form-item>
+                <el-button type="primary" @click="onSubmit">查询</el-button>
+              </el-form-item>
+
+          </el-row>
+          <el-row class="formTitle">
+            结果如下
+          </el-row>
+          <el-table
+                  :data="resultForm"
+                  style="width: 100%">
+            <el-table-column
+                    prop="checkTime"
+                    label="检测时间"
+                    width="300">
+            </el-table-column>
+            <el-table-column
+                    prop="place"
+                    label="检测地址"
+                    width="350">
+            </el-table-column>
+            <el-table-column
+                    prop="affected"
+                    label="检测结果"
+                    width="100">
+            </el-table-column>
+          </el-table>
+        </el-form>
+      </el-tab-pane>
+    </el-tabs>
+
+  </div>
+</body>
+</html>
+<style>
+.form{
+  padding: 5vh;
+  width: 50%;
+  margin-left: 25%;
+  margin-top: 10vh;
+  box-shadow: 0px 0px 5px rgba(0,0,0,0.3);
+}
+.formTitle{
+  text-align: center;
+  margin-bottom: 5%;
+  font-size: larger;
+  font-weight: bold;
+}
+.button{
+  position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+</style>
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<!--    引入样式文件-->
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<script>
+  new Vue({
+          el:"#cover",
+          props: {
+          },
+          //刚刚加载页面的时候，需要从数据库中读取所有启用核酸预约点(未实现mapper)
+          mounted(){
+              this.showPage();
+          },
+          data() {
+            return {
+              first:'first',
+              bookRules:{
+                name:{required: true,message: "请输入用户名称",trigger: "change"},
+                phone:{required: true,message: "请输入电话号码",trigger: "change"},
+                id:{required: true,message: "请输入身份证号",trigger: "change"},
+                checkPlace:{required: true,message: "请选择检测点",trigger: "change"},
+                checkTime:{required: true,message: "请选择检测时段",trigger: "change"},
+                live:{required: true,message: "请输入家庭住址",trigger: "change"}
+              },
+              inquireForm:{
+                userName:'',
+                cardID:''
+              },
+              //预约表数据模型
+              bookForm: {
+                userName:'',
+                tele:'',
+                cardID:'',
+                subPlace:'',
+                subTime:'',
+                home:''
+              },
+              //查询结果数据模型
+              resultForm:[],
+              //从数据库读取全部可以使用的地址名
+              checkPlaces:[],
+              //固定写死
+              checkTimes:[{
+                value:'下午1：30 - 3：30',
+                label:'下午1：30 - 3：30'
+              },{
+                value:'下午3：30 - 5：30',
+                label:'下午3：30 - 5：30'
+              },{
+                value:'晚上6：00 - 8：00',
+                label:'晚上6：00 - 8：00'
+              },{
+                value:'晚上8：00 - 10：00',
+                label:'晚上8：00 - 10：00'
+              }]
+            }
+          },
+          methods: {
+          //  用户提交预约信息，进行预约
+            showPage()
+            {
+              var _this  = this;
+              axios({
+                method:"get",
+                url:"http://localhost:9999/db-homework/place/initPlaces"
+              }).then(function (resp){
+                var lis = resp.data;
+                for(var i=0;i<lis.length;i++)
+                {
+                  lis[i].value=lis[i].placeName;
+                  lis[i].label=lis[i].placeName;
+                  _this.checkPlaces.push(lis[i]);
+                };
+              })
+            },
+            //重置用户提交表单
+            resetForm(formName){
+              this.$refs[formName].resetFields();
+            },
+            commitForm(){
+                 var _this = this;
+                  axios({
+                      method:"post",
+                      url:"http://localhost:9999/db-homework/subs/addSubs",
+                      data:_this.bookForm
+                  }).then(function (resp){
+                      if(resp.data == "success")  //表明预约成功
+                  //      弹出消息提示用户预约成功
+                      {
+                        _this.$message({
+                          message: '恭喜你，预约成功',
+                          type: 'success'
+                        });
+                      }
+                  })
+            },
+            //用户点击查询按钮，进行核酸结果查询
+            onSubmit(){
+                var _this =this;
+                axios({
+                  method:"post",
+                  url:"http://localhost:9999/db-homework/result/selectByCondition",
+                  data:_this.inquireForm
+                }).then(function (resp){
+                  console.log(resp.data)
+                  _this.resultForm = resp.data;
+                })
+            }
+
+          }
+
+
+        })
+
+</script>

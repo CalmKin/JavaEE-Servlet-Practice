@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>核酸检测点管理</title>
+
+    <style>
+        .el-table .warning-row {
+            background: oldlace;
+        }
+
+        .el-table .success-row {
+            background: #f0f9eb;
+        }
+    </style>
+</head>
+
+<body>
+<div id="app">
+<!--    顶部导航栏-->
+    <el-menu   :default-active="activeIndex2"
+               class="el-menu-demo"
+               mode="horizontal"
+               background-color="#545c64"
+               text-color="#fff"
+               active-text-color="#ffd04b">
+        <el-menu-item index="1"><a href="index.html" target="_self">检测结果</a></el-menu-item>
+        <el-menu-item index="2"><a href="./place.html" target="_self">检测地点</a></el-menu-item>
+        <el-menu-item index="3"><a href="./subsc.html" target="_self">预约情况</a></el-menu-item>
+    </el-menu>
+
+
+
+    <!--        批处理-->
+    <el-row>
+        <el-button type="danger" @click="deleteByIds" plain>批量删除</el-button>
+        <el-button type="primary" plain  @click="dialogFormVisible = true,is_add=true">新增</el-button>
+    </el-row>
+
+    <!--        新增记录对话框-->
+    <el-dialog title="新增地点" :visible.sync="dialogFormVisible">
+        <el-form :model="add_place">
+            <el-form-item label="地点名称" :label-width="formLabelWidth">
+                <el-input v-model="add_place.placeName" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="当前人数" :label-width="formLabelWidth">
+                <el-input v-model="add_place.subsNum" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="是否启用" :label-width="formLabelWidth">
+                <el-switch v-model="add_place.status" autocomplete="off" active-value=1
+                           inactive-value=0 ></el-switch>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogFormVisible = false">取 消</el-button>
+<!--            为了复用对话框，这里进行添加修改操作的判断-->
+            <el-button type="primary" @click="add_or_update">确 定</el-button>
+        </div>
+    </el-dialog>
+
+    <!--        table表格-->
+    <template>
+        <el-table
+                ref="multipleTable"
+                :data="places"
+                tooltip-effect="dark"
+                style="width: 100%"
+                :row-class-name="tableRowClassName"
+                @selection-change="handleSelectionChange">
+            <el-table-column
+                    type="selection"
+                    width="55"
+                    align="center"
+            >
+            </el-table-column>
+            <el-table-column
+                    type="index"
+                    width="50"
+                    align="center">
+            </el-table-column>
+            <el-table-column
+                    label=""
+                    width="120"
+                    align="center">
+                <template slot-scope="scope">{{ scope.row.date }}</template>
+            </el-table-column>
+            <el-table-column
+                    prop="placeName"
+                    label="地点名称"
+                    width="120"
+                    align="center">
+            </el-table-column>
+            <el-table-column
+                    prop="subsNum"
+                    label="预约人数"
+                    align="center">
+            </el-table-column>
+            <el-table-column
+                    prop="statusStr"
+                    label="当前状态"
+                    show-overflow-tooltip
+                    align="center">
+            </el-table-column>
+            <el-table-column
+                    label="操作"
+                    show-overflow-tooltip
+                    align="center"
+            >
+                <template v-slot="row">
+                    <div>
+                        <el-row>
+                            <el-button type="primary" @click="update_switch(row)">修改</el-button>
+                            <el-button type="danger" @click="deleteCur(row)">删除</el-button>
+                        </el-row>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+    </template>
+
+    <!--底部分页条-->
+    <el-pagination
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            :current-page="currentPage"
+            :page-sizes="[5, 10, 15, 20]"
+            :page-size="pageSize"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="totalCount">
+    </el-pagination>
+
+
+
+</div>
+<!--    因为element是基于vue的，所以要先引入vue-->
+<script src="js/vue.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<!--    引入样式文件-->
+<script src="element-ui/lib/index.js"></script>
+<link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+<script>
+    new Vue({
+        el:"#app",
+        mounted(){
+            //加载页面单独封装成一个函数
+            this.showPage();
+        },
+        data(){         //属于vue对象的数据模型
+            return{
+                dialogFormVisible: false,
+                formLabelWidth: '120px',
+                currentPage:1,
+                pageSize:5,         //每页显示的条数
+                totalCount:100,     //总共的记录数量
+                dialogVisible: false,
+                activeIndex2: '2',
+                //用于添加对象模型数据
+                add_place:{
+                    placeName:"",
+                    subsNum:"",
+                    status:""
+                },
+                // 显示在页面上的所有地点数据，是一个对象数组
+                places: [],
+                // 复选框选中数据集合
+                multipleSelection: [],
+                //要被删除的id集合
+                seletedIds:[],
+                is_add:false,
+                buttonSwitch:"1"
+            }
+        },
+        methods:{
+            //添加地点请求，复用同一个对话框
+            add_or_update()
+            {
+                if(this.is_add === true)        //如果是添加操作
+                {
+                    this.addPlace();
+                }
+                else        //否则是修改操作
+                {
+                    this.change_place();
+                }
+            },
+            addPlace(){
+                var _this=this;
+                axios({
+                    method:"post",
+                    url:"http://localhost:9999/db-homework/place/addPlace",
+                    //别忘了携带要发送的数据
+                    data:_this.add_place
+                }).then(function (resp){
+                    if(resp.data=="success")
+                    {
+                        //点击提交按钮之后，要关闭对话框
+                        _this.dialogFormVisible=false;
+                        //提交之后重新查询，更新页面
+                        _this.showPage();
+                        _this.$message({
+                            message: '恭喜你，添加成功',
+                            type: 'success'
+                        });
+                    }
+                })
+            },
+            //批量删除
+            deleteByIds() {
+                this.$confirm('此操作将删除该数据, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    var _this = this;
+                    let arr = this.multipleSelection;
+                    for (let i = 0; i < arr.length; i++) {  //获取选中对象的id属性，添加进数组
+                        this.seletedIds[i] = arr[i].id;
+                    }
+                    //获取所有地点的id之后，就能发送给后端
+                    axios({
+                        method: "post",
+                        url: "http://localhost:9999/db-homework/place/deleteByIds",
+                        data: _this.seletedIds
+                    }).then(function (resp) {
+                        if (resp.data == "success")     //如果后端操作成功
+                        {
+                            //刷新页面
+                            _this.showPage();
+                            _this.$message({
+                                message: '恭喜你，删除成功',
+                                type: 'success'
+                            });
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                })
+            },
+            //单个删除
+            deleteCur(row){
+                console.log(row.row)
+                this.multipleSelection=[row.row];
+                this.deleteByIds();
+            },
+            //将标记变量进行转换
+            update_switch(row){
+                //先将标记变量变为false，表示进行修改操作
+
+                this.is_add=false;
+                row.row.status = row.row.statusStr=="启用"?"1":"0";
+                this.add_place=row.row;
+                console.log(row.row)
+                console.log(this.add_place)
+                console.log("---------------------------")
+                this.dialogFormVisible=true;
+            },
+            //单个修改
+            change_place(){
+                var _this=this;     //方便绑定数据模型
+                console.log(this.add_place);
+                axios({
+                    method:"post",
+                    //这里动态拼接get请求字符串
+                    url:"http://localhost:9999/db-homework/place/changePlace",
+                    data:_this.add_place
+                }).then(function (resp){
+                    if(resp.data == "success" )
+                    {
+                        _this.$message({
+                            message: '恭喜你，修改成功',
+                            type: 'success'
+                        });
+                        _this.showPage();
+                        _this.dialogFormVisible=false;
+                    }
+                })
+            },
+            //显示页面的函数
+            showPage(){
+                var _this=this;     //方便绑定数据模型
+                axios({
+                    method:"get",
+                    //这里动态拼接get请求字符串
+                    url:"http://localhost:9999/db-homework/place/selectAllByPage?currentPage="+_this.currentPage+"&pageSize="+_this.pageSize,
+                }).then(function (resp){
+                    console.log(resp.data.lis);
+                    _this.places=resp.data.lis;  //将页面的表单数据和后端返回响应的数据进行绑定
+                    _this.totalCount=resp.data.totalCount;       //从pageBean中获取相应的数据
+                })
+            },
+            tableRowClassName({row, rowIndex}) {
+                if (rowIndex %2 === 0) {
+                    return 'warning-row';
+                } else if (rowIndex % 2 === 1) {
+                    return 'success-row';
+                }
+                return '';
+            },
+            toggleSelection(rows) {
+                if (rows) {
+                    rows.forEach(row => {
+                        this.$refs.multipleTable.toggleRowSelection(row);
+                    });
+                } else {
+                    this.$refs.multipleTable.clearSelection();
+                }
+            },
+            //复选框操作
+            handleSelectionChange(val) {
+                this.multipleSelection = val;
+            },
+
+            //    分页条工具
+            handleSizeChange(val) {
+                this.pageSize=val;
+                this.showPage();
+            },
+            handleCurrentChange(val) {
+                this.currentPage=val;
+                this.showPage();
+            }
+
+
+        }
+
+
+
+
+    })
+</script>
+</body>
+</html>

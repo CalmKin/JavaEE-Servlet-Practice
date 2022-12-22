@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>核酸结果信息</title>
+    <style>
+
+        .el-table .warning-row {
+            background: oldlace;
+        }
+
+        .el-table .success-row {
+            background: #f0f9eb;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+<!--顶部导航栏-->
+        <el-menu   :default-active="activeIndex2"
+                   class="el-menu-demo"
+                   mode="horizontal"
+                   background-color="#545c64"
+                   text-color="#fff"
+                   active-text-color="#ffd04b">
+            <el-menu-item index="1"><a href="index.html" target="_self">检测结果</a></el-menu-item>
+            <el-menu-item index="2"><a href="./place.html" target="_self">检测地点</a></el-menu-item>
+            <el-menu-item index="3"><a href="./subsc.html" target="_self">预约情况</a></el-menu-item>
+        </el-menu>
+
+
+<!--        顶部搜索栏-->
+        <el-form :inline="true" :model="searchCondition" class="demo-form-inline">
+            <el-select v-model="searchCondition.status" placeholder="当前状态">
+                <el-option label="阴性" value="阴性"></el-option>
+                <el-option label="阳性" value="阳性"></el-option>
+            </el-select>
+            <el-form-item label="用户名称">
+                <el-input v-model="searchCondition.userName" placeholder="用户名称"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="onSubmit">查询</el-button>
+            </el-form-item>
+        </el-form>
+
+
+<!--        查看用户信息对话框-->
+        <el-dialog title="用户信息" :visible.sync="dialogFormVisible">
+            <el-table
+                    :data="userInfo"
+                    style="width: 100%">
+                <el-table-column
+                        prop="userName"
+                        label="姓名"
+                        width="180">
+                </el-table-column>
+                <el-table-column
+                        prop="tele"
+                        label="电话号码"
+                        width="180">
+                </el-table-column>
+                <el-table-column
+                        prop="cardID"
+                        label="身份证号">
+                </el-table-column>
+                <el-table-column
+                        prop="addr"
+                        label="家庭地址">
+                </el-table-column>
+            </el-table>
+
+        </el-dialog>
+
+
+
+
+<!--        table表格-->
+
+        <template>
+            <el-table
+                    ref="multipleTable"
+                    :data="results"
+                    tooltip-effect="dark"
+                    style="width: 100%"
+                    :row-class-name="tableRowClassName"
+                   >
+                <el-table-column
+                        type="index"
+                        width="50"
+                        align="center"
+                        label=""
+                >
+                </el-table-column>
+                <el-table-column
+                        label=""
+                        width="120"
+                        align="center">
+                    <template slot-scope="scope">{{ scope.row.date }}</template>
+                </el-table-column>
+                <el-table-column
+                        prop="userName"
+                        label="用户名称"
+                        width="120"
+                        align="center">
+                </el-table-column>
+                <el-table-column
+                        prop="checkTime"
+                        label="检测时间"
+                        show-overflow-tooltip
+                        align="center">
+                </el-table-column>
+                <el-table-column
+                    prop="place"
+                    label="检测地点"
+                    align="center">
+                </el-table-column>
+                <el-table-column
+                        prop="affected"
+                        label="检测结果"
+                        show-overflow-tooltip
+                        align="center">
+                </el-table-column>
+                <el-table-column
+                        label="操作"
+                        show-overflow-tooltip
+                        align="center"
+                >
+                   <template v-slot="row">
+                       <div>
+                           <el-row>
+                               <el-button type="primary" @click="searchUser(row)">查看用户信息</el-button>
+                           </el-row>
+                       </div>
+                   </template>
+                </el-table-column>
+            </el-table>
+        </template>
+
+<!--底部分页条-->
+        <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+                :current-page="currentPage"
+                :page-sizes="[5, 10, 15, 20]"
+                :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="totalCount">
+        </el-pagination>
+    </div>
+    <!--    因为element是基于vue的，所以要先引入vue-->
+    <script src="js/vue.js"></script>
+    <script src="js/axios-0.18.0.js"></script>
+    <!--    引入样式文件-->
+    <script src="element-ui/lib/index.js"></script>
+    <link rel="stylesheet" href="element-ui/lib/theme-chalk/index.css">
+    <script>
+        new Vue({
+            el:"#app",
+            mounted(){
+                //加载页面单独封装成一个函数
+                this.showPage();
+            },
+            data(){         //属于vue对象的数据模型
+                return{
+                    dialogFormVisible: false,
+                    dialogVisible: false,
+                    formLabelWidth: '120px',
+                    currentPage:1,
+                    pageSize:5,         //每页显示的条数
+                    totalCount:100,     //总共的记录数量
+                    //顶部导航栏的激活下标
+                    activeIndex: '1',
+                    activeIndex2: '1',
+                    // 显示在页面上的所有核酸记录数据，是一个对象数组
+                    results: [ {
+                        userName: "",
+                        checkTime: "",
+                        addr:"",
+                        affected: "",
+                        //用户的id，用于查询用户的完整信息
+                        id:""
+                    }],
+                    //用于查询的对象数据模型
+                    searchCondition:{
+                        status:"",
+                        userName: "",
+                    },
+                    userInfo :[],
+                    selectedUserId:""
+                }
+            },
+            methods:{
+                //查询用户信息
+                searchUser(row){
+                    this.dialogFormVisible=true;
+                    this.selectedUserId = row.row.userId;
+                    var _this = this;
+                    axios({
+                        method:"get",
+                        url:"http://localhost:9999/db-homework/result/selectUserById?id="+_this.selectedUserId,
+                    }).then(function (resp){
+                        _this.userInfo=[],
+                        _this.userInfo.push(resp.data);
+                    })
+                },
+                //显示页面的函数(可以包含条件查询)
+                showPage(){
+                    var _this=this;     //方便绑定数据模型
+                    axios({
+                        method:"post",
+                        //这里动态拼接get请求字符串
+                        url:"http://localhost:9999/db-homework/result/selectByPageAndCondition?currentPage=" +_this.currentPage +"&pageSize="+_this.pageSize,
+                        data:_this.searchCondition
+                    }).then(function (resp){
+                        console.log(resp.data)
+                        _this.results=resp.data.lis;  //将页面的表单数据和后端返回响应的数据进行绑定
+                        _this.totalCount=resp.data.totalCount;       //从pageBean中获取相应的数据
+                    })
+                },
+                //按下查询按钮之后，向后端发送请求
+                onSubmit() {
+                    this.showPage();
+                },
+                tableRowClassName({row, rowIndex}) {
+                    if (rowIndex %2 === 0) {
+                        return 'warning-row';
+                    } else if (rowIndex % 2 === 1) {
+                        return 'success-row';
+                    }
+                    return '';
+                },
+                toggleSelection(rows) {
+                    if (rows) {
+                        rows.forEach(row => {
+                            this.$refs.multipleTable.toggleRowSelection(row);
+                        });
+                    } else {
+                        this.$refs.multipleTable.clearSelection();
+                    }
+                },
+            //    分页条工具
+                handleSizeChange(val) {
+                    this.pageSize=val;
+                    this.showPage();
+                },
+                handleCurrentChange(val) {
+                    this.currentPage=val;
+                    this.showPage();
+                }
+            }
+        })
+    </script>
+</body>
+</html>
