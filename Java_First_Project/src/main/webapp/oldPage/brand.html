@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <div id="app">
+        <a href="addBrand.html"><input type="button" value="新增"></a><br>
+        <hr>
+        <table id="brandTable" border="1" cellspacing="0" width="100%">
+            <tr>
+                <th>序号</th>
+                <th>品牌名称</th>
+                <th>企业名称</th>
+                <th>排序</th>
+                <th>品牌介绍</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+<!--            i是索引，brand是数据-->
+            <tr  v-for="(brand,i) in brands"  align="center">
+                <td>{{i+1}}</td>        <!--插值表达式-->
+                <td>{{brand.brandName}}</td>
+                <td>{{brand.companyName}}</td>
+                <td>{{brand.ordered}}</td>
+                <td>{{brand.description}}</td>
+                <td>{{brand.statusStr}}</td>
+                <td><a href="#">修改</a> <a href="#">删除</a></td>
+            </tr>
+        </table>
+    </div>
+
+
+    <script src="../js/axios-0.18.0.js"></script>
+    <script src="../js/vue.js"></script>
+
+    <script>
+        new Vue({
+            el:"#app",      //表明控制的范围
+            data(){         //这里存的是控制范围内的元素所需要使用到的数据
+                return {
+                    brands:[]
+                }
+            },
+            mounted(){      //页面加载完成之后需要执行的操作
+                var _this = this;
+                axios({
+                    method:"get",
+                    url:"http://localhost:8080/db-homework/selectAllServlet"
+                }).then(function (resp) {
+                    _this.brands=resp.data;       //这里不能直接用this进行赋值，因为这里的this是window对象，我们需要给vue对象赋值
+                })
+            }
+        })
+    </script>
+</body>
+
+</html>
